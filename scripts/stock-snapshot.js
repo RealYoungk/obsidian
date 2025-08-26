@@ -44,9 +44,11 @@ function extractCompanyInfo(content) {
     let ticker = '';
     let companyName = '';
     let market = 'KS'; // 기본값 코스피
+    let isStudyStock = false;
     
-    // YAML frontmatter에서 ticker 추출
+    // YAML frontmatter에서 ticker, market, tags 추출
     let inFrontmatter = false;
+    let tags = [];
     for (const line of lines) {
         if (line.trim() === '---') {
             if (!inFrontmatter) {
@@ -62,6 +64,11 @@ function extractCompanyInfo(content) {
             if (line.startsWith('market:')) {
                 market = line.split(':')[1].trim().replace(/['"]/g, '');
             }
+            if (line.startsWith('tags:')) {
+                // tags 섹션 시작
+            } else if (line.startsWith('  - ') && line.includes('스터디종목')) {
+                isStudyStock = true;
+            }
         }
     }
     
@@ -73,7 +80,7 @@ function extractCompanyInfo(content) {
         }
     }
     
-    return { ticker, companyName, market };
+    return { ticker, companyName, market, isStudyStock };
 }
 
 // 모든 기업 파일 찾기
@@ -96,12 +103,13 @@ function findAllCompanies(dir) {
                 searchDir(fullPath);
             } else if (item.endsWith('.md')) {
                 const content = fs.readFileSync(fullPath, 'utf-8');
-                const { ticker, companyName, market } = extractCompanyInfo(content);
+                const { ticker, companyName, market, isStudyStock } = extractCompanyInfo(content);
                 if (ticker && companyName) {
                     companies.push({ 
                         ticker, 
                         companyName, 
                         market,
+                        isStudyStock,
                         filePath: fullPath 
                     });
                 }
@@ -317,6 +325,9 @@ tags:
                 return '💥';
             };
             
+            // 환율 설정
+            const exchangeRate = 1330; // 달러당 원
+            
             // 가격 데이터 안전하게 포맷팅 (통화별)
             const formatPrice = (price, market) => {
                 if (price === null || price === undefined) return 'N/A';
@@ -331,6 +342,19 @@ tags:
                 } else {
                     // 한국 주식: 원 단위 (정수)
                     return Math.round(price).toLocaleString();
+                }
+            };
+            
+            // 미국 주식용 원화 병기 포맷
+            const formatPriceWithWon = (price, market) => {
+                if (price === null || price === undefined) return 'N/A';
+                
+                if (market === 'US') {
+                    const dollarStr = formatPrice(price, market);
+                    const wonPrice = Math.round(price * exchangeRate).toLocaleString();
+                    return `$${dollarStr} (₩${wonPrice})`;
+                } else {
+                    return `₩${formatPrice(price, market)}`;
                 }
             };
             
@@ -349,26 +373,29 @@ tags:
                 marketName = company.market;
             }
             
-            // 통화 단위 결정
-            const currency = company.market === 'US' ? '$' : '₩';
+            // 스터디 종목 표시
+            const studyStockIndicator = company.isStudyStock ? ' 🎯' : '';
             
             content += `
-## ${company.companyName}
+## ${company.companyName}${studyStockIndicator}
 - **종목코드**: ${company.ticker}
 - **시장**: ${marketName}
-- **현재가**: ${currency}${formatPrice(prices.today, company.market)}
+- **현재가**: ${formatPriceWithWon(prices.today, company.market)}
 - **시가총액**: ${marketCap}
 - **주가 변동**:
-  - 1주일: ${currency}${formatPrice(prices.weekAgo, company.market)} → ${currency}${formatPrice(prices.today, company.market)} (${returns.week !== 'N/A' && parseFloat(returns.week) > 0 ? '+' : ''}${returns.week}${returns.week !== 'N/A' ? '%' : ''} ${getEmoji(returns.week)})
-  - 1개월: ${currency}${formatPrice(prices.monthAgo, company.market)} → ${currency}${formatPrice(prices.today, company.market)} (${returns.month !== 'N/A' && parseFloat(returns.month) > 0 ? '+' : ''}${returns.month}${returns.month !== 'N/A' ? '%' : ''} ${getEmoji(returns.month)})
-  - 6개월: ${currency}${formatPrice(prices.sixMonthsAgo, company.market)} → ${currency}${formatPrice(prices.today, company.market)} (${returns.sixMonths !== 'N/A' && parseFloat(returns.sixMonths) > 0 ? '+' : ''}${returns.sixMonths}${returns.sixMonths !== 'N/A' ? '%' : ''} ${getEmoji(returns.sixMonths)})
-  - 1년: ${currency}${formatPrice(prices.yearAgo, company.market)} → ${currency}${formatPrice(prices.today, company.market)} (${returns.year !== 'N/A' && parseFloat(returns.year) > 0 ? '+' : ''}${returns.year}${returns.year !== 'N/A' ? '%' : ''} ${getEmoji(returns.year)})
+  - 1주일: ${formatPriceWithWon(prices.weekAgo, company.market)} → ${formatPriceWithWon(prices.today, company.market)} (${returns.week !== 'N/A' && parseFloat(returns.week) > 0 ? '+' : ''}${returns.week}${returns.week !== 'N/A' ? '%' : ''} ${getEmoji(returns.week)})
+  - 1개월: ${formatPriceWithWon(prices.monthAgo, company.market)} → ${formatPriceWithWon(prices.today, company.market)} (${returns.month !== 'N/A' && parseFloat(returns.month) > 0 ? '+' : ''}${returns.month}${returns.month !== 'N/A' ? '%' : ''} ${getEmoji(returns.month)})
+  - 6개월: ${formatPriceWithWon(prices.sixMonthsAgo, company.market)} → ${formatPriceWithWon(prices.today, company.market)} (${returns.sixMonths !== 'N/A' && parseFloat(returns.sixMonths) > 0 ? '+' : ''}${returns.sixMonths}${returns.sixMonths !== 'N/A' ? '%' : ''} ${getEmoji(returns.sixMonths)})
+  - 1년: ${formatPriceWithWon(prices.yearAgo, company.market)} → ${formatPriceWithWon(prices.today, company.market)} (${returns.year !== 'N/A' && parseFloat(returns.year) > 0 ? '+' : ''}${returns.year}${returns.year !== 'N/A' ? '%' : ''} ${getEmoji(returns.year)})
 - **분석노트**: [[${company.filePath.replace(VAULT_PATH + '/', '').replace('.md', '')}]]
 
 `;
         } else {
+            // 스터디 종목 표시 (에러 상황에서도)
+            const studyStockIndicator = company.isStudyStock ? ' 🎯' : '';
+            
             content += `
-## ${company.companyName}
+## ${company.companyName}${studyStockIndicator}
 - **종목코드**: ${company.ticker}
 - **시장**: ${company.market === 'KS' ? '코스피' : '코스닥'}
 - **상태**: ⚠️ 주가 데이터 조회 실패
