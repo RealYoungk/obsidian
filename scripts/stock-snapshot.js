@@ -123,11 +123,21 @@ function findAllCompanies(dir) {
 // Yahoo Finance를 통한 주가 조회
 async function getStockPrices(ticker, market) {
     try {
-        // 경고 메시지 억제
-        yahooFinance.suppressNotices(['ripHistorical']);
+        // 경고 메시지 억제 (유효한 notice ID만 사용)
+        try {
+            yahooFinance.suppressNotices(['ripHistorical', 'yahooSurvey']);
+        } catch (error) {
+            // suppressNotices 실패해도 계속 진행
+        }
         
-        // 한국 주식의 경우 .KS(코스피) 또는 .KQ(코스닥) 접미사 추가
-        const symbol = `${ticker}.${market}`;
+        // 시장별 심볼 형식 결정
+        let symbol;
+        if (market === "US") {
+            symbol = ticker; // 미국 주식: 티커 그대로
+        } else {
+            symbol = `${ticker}.${market}`; // 한국 주식: .KS, .KQ 접미사
+        }
+        
         const dates = getTargetDates();
         
         // chart API 사용 (새로운 방식)
@@ -170,12 +180,25 @@ async function getStockPrices(ticker, market) {
             const quoteData = await yahooFinance.quote(symbol);
             if (quoteData && quoteData.marketCap) {
                 const marketCap = quoteData.marketCap;
-                if (marketCap > 1000000000000) { // 1조 이상
-                    marketCapInfo = (marketCap / 1000000000000).toFixed(1) + "조";
-                } else if (marketCap > 100000000000) { // 1000억 이상
-                    marketCapInfo = Math.round(marketCap / 100000000000) + "천억";
-                } else if (marketCap > 100000000) { // 1억 이상
-                    marketCapInfo = Math.round(marketCap / 100000000) + "억";
+                
+                if (market === 'US') {
+                    // 미국 주식: 달러 기준
+                    if (marketCap > 1000000000000) { // 1T 이상
+                        marketCapInfo = "$" + (marketCap / 1000000000000).toFixed(1) + "T";
+                    } else if (marketCap > 1000000000) { // 1B 이상
+                        marketCapInfo = "$" + (marketCap / 1000000000).toFixed(1) + "B";
+                    } else if (marketCap > 1000000) { // 1M 이상
+                        marketCapInfo = "$" + Math.round(marketCap / 1000000) + "M";
+                    }
+                } else {
+                    // 한국 주식: 원 기준
+                    if (marketCap > 1000000000000) { // 1조 이상
+                        marketCapInfo = (marketCap / 1000000000000).toFixed(1) + "조";
+                    } else if (marketCap > 100000000000) { // 1000억 이상
+                        marketCapInfo = Math.round(marketCap / 100000000000) + "천억";
+                    } else if (marketCap > 100000000) { // 1억 이상
+                        marketCapInfo = Math.round(marketCap / 100000000) + "억";
+                    }
                 }
             }
         } catch (error) {
@@ -191,12 +214,25 @@ async function getStockPrices(ticker, market) {
                 
                 if (summaryData && summaryData.price && summaryData.price.marketCap) {
                     const marketCap = summaryData.price.marketCap;
-                    if (marketCap > 1000000000000) {
-                        marketCapInfo = (marketCap / 1000000000000).toFixed(1) + "조";
-                    } else if (marketCap > 100000000000) {
-                        marketCapInfo = Math.round(marketCap / 100000000000) + "천억";
-                    } else if (marketCap > 100000000) {
-                        marketCapInfo = Math.round(marketCap / 100000000) + "억";
+                    
+                    if (market === 'US') {
+                        // 미국 주식: 달러 기준  
+                        if (marketCap > 1000000000000) {
+                            marketCapInfo = "$" + (marketCap / 1000000000000).toFixed(1) + "T";
+                        } else if (marketCap > 1000000000) {
+                            marketCapInfo = "$" + (marketCap / 1000000000).toFixed(1) + "B";
+                        } else if (marketCap > 1000000) {
+                            marketCapInfo = "$" + Math.round(marketCap / 1000000) + "M";
+                        }
+                    } else {
+                        // 한국 주식: 원 기준
+                        if (marketCap > 1000000000000) {
+                            marketCapInfo = (marketCap / 1000000000000).toFixed(1) + "조";
+                        } else if (marketCap > 100000000000) {
+                            marketCapInfo = Math.round(marketCap / 100000000000) + "천억";
+                        } else if (marketCap > 100000000) {
+                            marketCapInfo = Math.round(marketCap / 100000000) + "억";
+                        }
                     }
                 }
             } catch (error) {
@@ -281,26 +317,52 @@ tags:
                 return '💥';
             };
             
-            // 가격 데이터 안전하게 포맷팅
-            const formatPrice = (price) => {
+            // 가격 데이터 안전하게 포맷팅 (통화별)
+            const formatPrice = (price, market) => {
                 if (price === null || price === undefined) return 'N/A';
-                return Math.round(price).toLocaleString();
+                
+                if (market === 'US') {
+                    // 미국 주식: $10 미만은 소수점 2자리, 이상은 정수
+                    if (price < 10) {
+                        return price.toFixed(2);
+                    } else {
+                        return Math.round(price).toLocaleString();
+                    }
+                } else {
+                    // 한국 주식: 원 단위 (정수)
+                    return Math.round(price).toLocaleString();
+                }
             };
             
             // 시가총액 계산 (Yahoo Finance에서 제공되는 경우)
             const marketCap = prices.marketCap || "N/A";
             
+            // 시장 표시명 결정
+            let marketName;
+            if (company.market === 'KS') {
+                marketName = '코스피';
+            } else if (company.market === 'KQ') {
+                marketName = '코스닥';
+            } else if (company.market === 'US') {
+                marketName = 'NASDAQ/NYSE';
+            } else {
+                marketName = company.market;
+            }
+            
+            // 통화 단위 결정
+            const currency = company.market === 'US' ? '$' : '₩';
+            
             content += `
 ## ${company.companyName}
 - **종목코드**: ${company.ticker}
-- **시장**: ${company.market === 'KS' ? '코스피' : '코스닥'}
-- **현재가**: ${formatPrice(prices.today)}원
+- **시장**: ${marketName}
+- **현재가**: ${currency}${formatPrice(prices.today, company.market)}
 - **시가총액**: ${marketCap}
 - **주가 변동**:
-  - 1주일: ${formatPrice(prices.weekAgo)}원 → ${formatPrice(prices.today)}원 (${returns.week !== 'N/A' && parseFloat(returns.week) > 0 ? '+' : ''}${returns.week}${returns.week !== 'N/A' ? '%' : ''} ${getEmoji(returns.week)})
-  - 1개월: ${formatPrice(prices.monthAgo)}원 → ${formatPrice(prices.today)}원 (${returns.month !== 'N/A' && parseFloat(returns.month) > 0 ? '+' : ''}${returns.month}${returns.month !== 'N/A' ? '%' : ''} ${getEmoji(returns.month)})
-  - 6개월: ${formatPrice(prices.sixMonthsAgo)}원 → ${formatPrice(prices.today)}원 (${returns.sixMonths !== 'N/A' && parseFloat(returns.sixMonths) > 0 ? '+' : ''}${returns.sixMonths}${returns.sixMonths !== 'N/A' ? '%' : ''} ${getEmoji(returns.sixMonths)})
-  - 1년: ${formatPrice(prices.yearAgo)}원 → ${formatPrice(prices.today)}원 (${returns.year !== 'N/A' && parseFloat(returns.year) > 0 ? '+' : ''}${returns.year}${returns.year !== 'N/A' ? '%' : ''} ${getEmoji(returns.year)})
+  - 1주일: ${currency}${formatPrice(prices.weekAgo, company.market)} → ${currency}${formatPrice(prices.today, company.market)} (${returns.week !== 'N/A' && parseFloat(returns.week) > 0 ? '+' : ''}${returns.week}${returns.week !== 'N/A' ? '%' : ''} ${getEmoji(returns.week)})
+  - 1개월: ${currency}${formatPrice(prices.monthAgo, company.market)} → ${currency}${formatPrice(prices.today, company.market)} (${returns.month !== 'N/A' && parseFloat(returns.month) > 0 ? '+' : ''}${returns.month}${returns.month !== 'N/A' ? '%' : ''} ${getEmoji(returns.month)})
+  - 6개월: ${currency}${formatPrice(prices.sixMonthsAgo, company.market)} → ${currency}${formatPrice(prices.today, company.market)} (${returns.sixMonths !== 'N/A' && parseFloat(returns.sixMonths) > 0 ? '+' : ''}${returns.sixMonths}${returns.sixMonths !== 'N/A' ? '%' : ''} ${getEmoji(returns.sixMonths)})
+  - 1년: ${currency}${formatPrice(prices.yearAgo, company.market)} → ${currency}${formatPrice(prices.today, company.market)} (${returns.year !== 'N/A' && parseFloat(returns.year) > 0 ? '+' : ''}${returns.year}${returns.year !== 'N/A' ? '%' : ''} ${getEmoji(returns.year)})
 - **분석노트**: [[${company.filePath.replace(VAULT_PATH + '/', '').replace('.md', '')}]]
 
 `;
