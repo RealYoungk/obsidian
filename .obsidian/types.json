@@ -1,0 +1,11 @@
+{
+  "types": {
+    "aliases": "aliases",
+    "cssclasses": "multitext",
+    "tags": "tags",
+    "valuation": "number",
+    "기술": "multitext",
+    "작성일": "date",
+    "업데이트": "date"
+  }
+}

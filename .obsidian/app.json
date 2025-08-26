@@ -1,0 +1,17 @@
+{
+  "readableLineLength": false,
+  "showLineNumber": true,
+  "attachmentFolderPath": "files",
+  "trashOption": "local",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "분류가 필요한 노트",
+  "livePreview": false,
+  "defaultViewMode": "preview",
+  "alwaysUpdateLinks": true,
+  "pdfExportSettings": {
+    "pageSize": "Letter",
+    "landscape": false,
+    "margin": "0",
+    "downscalePercent": 100
+  }
+}

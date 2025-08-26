@@ -1,0 +1,5 @@
+{
+  "folder": "templates",
+  "dateFormat": "yyyy.MM.DD (ddd)",
+  "timeFormat": "a h시 m분"
+}

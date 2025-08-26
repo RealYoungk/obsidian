@@ -1,0 +1,28 @@
+{
+  "명령어 설정": "Shell commands 플러그인 설정에 아래 명령어를 추가하세요",
+  "commands": [
+    {
+      "id": "stock-snapshot",
+      "name": "📊 주가 스냅샷 생성",
+      "shell": "/bin/bash",
+      "command": "cd /Users/realyoungk/Library/Mobile\\ Documents/com~apple~CloudDocs/obsidian/realyoungk\\'s\\ volt/scripts && npm run snapshot",
+      "icon": "trending-up",
+      "confirm": false,
+      "output": {
+        "showOutput": true,
+        "outputChannel": "notification"
+      }
+    },
+    {
+      "id": "stock-snapshot-silent",
+      "name": "🔇 주가 스냅샷 생성 (조용히)",
+      "shell": "/bin/bash",
+      "command": "cd '/Users/realyoungk/Library/Mobile Documents/com~apple~CloudDocs/obsidian/realyoungk's volt/scripts' && npm run snapshot > /dev/null 2>&1",
+      "icon": "activity",
+      "confirm": false,
+      "output": {
+        "showOutput": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+# Obsidian 설정 (일부만)
+.obsidian/workspace*
+.obsidian/graph.json
+.obsidian/community-plugins.json
+.obsidian/hotkeys.json
+.obsidian/appearance.json
+.obsidian/core-plugins.json
+
+# 시스템 파일
+.DS_Store
+Thumbs.db
+*.tmp
+
+# 개인 정보
+**/개인정보*
+**/private*
+**/secret*
+
+# API 키나 설정
+**/config.json
+**/api-keys*
+**/credentials*
+
+# 임시 파일
+**/.temp*
+**/temp-*
+
+# 로그 파일
+*.log
+
+# Node.js (scripts 폴더)
+scripts/node_modules/
+scripts/.env
+scripts/config.local.js

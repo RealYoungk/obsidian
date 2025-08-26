@@ -1,0 +1,16 @@
+{
+  "name": "obsidian-stock-tracker",
+  "version": "1.0.0",
+  "description": "주가 스냅샷 자동 생성 스크립트",
+  "main": "stock-snapshot.js",
+  "scripts": {
+    "snapshot": "node stock-snapshot.js",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "yahoo-finance2": "^2.11.3"
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "MIT"
+}
