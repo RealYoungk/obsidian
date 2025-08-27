@@ -5,10 +5,11 @@
   "trashOption": "local",
   "newFileLocation": "folder",
   "newFileFolderPath": "분류가 필요한 노트",
-  "livePreview": false,
+  "livePreview": true,
   "defaultViewMode": "preview",
   "alwaysUpdateLinks": true,
   "pdfExportSettings": {
+    "includeName": false,
     "pageSize": "Letter",
     "landscape": false,
     "margin": "0",
